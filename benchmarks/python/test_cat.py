@@ -358,6 +358,7 @@ def get_cat_qwen2_inputs() -> list[torch.Tensor]:
     return inputs
 
 
+@pytest.mark.resize
 def test_cat_qwen2_fwd_11_nvf_benchmark(
     benchmark, disable_validation: bool, disable_benchmarking: bool
 ):

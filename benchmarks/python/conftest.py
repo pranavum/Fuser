@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import pytest
 from .core import BENCHMARK_CONFIG
+from .scheduler_markers import (
+    SchedulerRecorder,
+    declared_schedulers,
+    register_scheduler_markers,
+)
 from nvfuser_direct.pytorch_utils import DEVICE_PROPERTIES
 import os
 
@@ -97,6 +102,17 @@ def pytest_addoption(parser):
         help="Run benchmark scripts with nsys. Disable all other profilers.",
     )
 
+    parser.addoption(
+        "--report-schedulers",
+        action="store_true",
+        default=False,
+        help="Report which schedulers each benchmark actually ran on and flag "
+        "benchmarks whose scheduler markers disagree. Implies "
+        "--disable-benchmarking, since profiling and the benchmark timer "
+        "cannot both own CUPTI. Intended for a targeted subset of benchmarks "
+        "rather than a full sweep of the suite.",
+    )
+
 
 @pytest.fixture
 def disable_validation(request):
@@ -128,39 +144,86 @@ def pytest_configure(config):
     if config.getoption("--benchmark-num-inputs"):
         BENCHMARK_CONFIG["num_inputs"] = int(config.getoption("--benchmark-num-inputs"))
 
-    # Scheduler markers may become stale and are not 100% accurate.
-    config.addinivalue_line(
-        "markers",
-        "inner_outer_persistent: mark tests using inner_outer_persistent scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "inner_persistent: mark tests using inner_persistent scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "outer_persistent: mark tests using outer_persistent scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "reduction: mark tests using reduction scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "matmul: mark tests using matmul scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "resize: mark tests using resize scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "transpose: mark tests using transpose scheduler if not being segmented.",
-    )
-    config.addinivalue_line(
-        "markers",
-        "pointwise: mark tests using pointwise scheduler if not being segmented.",
-    )
+    register_scheduler_markers(config)
+
+    if config.getoption("--report-schedulers"):
+        # The benchmark timer and the fusion profiler are both CUPTI
+        # subscribers; CUPTI only allows one, so benchmarking is turned off.
+        config.option.disable_benchmarking = True
+        config._scheduler_recorder = SchedulerRecorder()
+        config._scheduler_recorder.install()
+
+
+def pytest_unconfigure(config):
+    recorder = getattr(config, "_scheduler_recorder", None)
+    if recorder is not None:
+        recorder.uninstall()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    """Attribute profiled schedulers to the benchmark currently running."""
+    recorder = getattr(item.config, "_scheduler_recorder", None)
+    if recorder is None:
+        yield
+        return
+    recorder.set_current(item.nodeid)
+    try:
+        yield
+    finally:
+        recorder.set_current(None)
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    recorder = getattr(config, "_scheduler_recorder", None)
+    if recorder is None:
+        return
+
+    declared = getattr(config, "_declared_schedulers", {})
+    write = terminalreporter.write_line
+
+    write("")
+    write("=== scheduler markers vs. observed schedulers ===")
+    if recorder.disabled_after_failures:
+        write(
+            f"Profiling was switched off after "
+            f"{recorder.MAX_CONSECUTIVE_FAILURES} executions in a row failed; "
+            "the results below are incomplete. Fix the failures, or point "
+            "--report-schedulers at benchmarks that run on this hardware."
+        )
+    if not recorder.observed:
+        write(
+            "No fusion was executed, so no scheduler could be observed. "
+            "--report-schedulers only covers nvFuser benchmarks; the baseline "
+            "(eager/torchcompile) ones never build a FusionDefinition."
+        )
+        return
+
+    rows = recorder.diff(declared)
+    profiled = len({nodeid.split("[")[0] for nodeid in recorder.observed})
+    if not rows:
+        write(f"All {profiled} profiled benchmarks match their markers.")
+        return
+
+    unmarked = [row for row in rows if row[3]]
+    write(f"{len(rows)} of {profiled} profiled benchmarks differ from their markers.")
+
+    if unmarked:
+        write("")
+        write("  ran on an unmarked scheduler (add these markers):")
+        for func, want, observed, missing, _extra in unmarked:
+            write(f"    {func}")
+            write(f"        marked:   {', '.join(sorted(want)) or '(none)'}")
+            write(f"        observed: {', '.join(sorted(observed))}")
+            write(f"        MISSING:  {', '.join(sorted(missing))}")
+
+    only_extra = [row for row in rows if not row[3]]
+    if only_extra:
+        write("")
+        write("  marked but not seen in this run (often fine -- this run may")
+        write("  not have covered the size or hardware that triggers them):")
+        for func, _want, _observed, _missing, extra in only_extra:
+            write(f"    {func}: {', '.join(sorted(extra))}")
 
 
 def pytest_collection_modifyitems(session, config, items):
@@ -172,6 +235,11 @@ def pytest_collection_modifyitems(session, config, items):
     """
 
     from nvfuser_direct.pytorch_utils import retry_on_oom_or_skip_test
+
+    if getattr(config, "_scheduler_recorder", None) is not None:
+        config._declared_schedulers = {
+            item.nodeid: declared_schedulers(item) for item in items
+        }
 
     executors = [
         "eager",

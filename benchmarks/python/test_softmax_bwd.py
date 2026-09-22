@@ -80,6 +80,8 @@ def softmax_bwd_iobytes(size: tuple, dtype: torch.dtype):
         pytest.param(1, marks=pytest.mark.inner_persistent),
     ],
 )
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_softmax_bwd_nvf_benchmark(
     benchmark,
     size: tuple,
@@ -115,6 +117,8 @@ def test_softmax_bwd_nvf_benchmark(
         pytest.param(1, marks=pytest.mark.inner_persistent),
     ],
 )
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_softmax_bwd_baseline_benchmark(
     benchmark,
     size: tuple,

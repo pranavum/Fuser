@@ -6,6 +6,7 @@ import torch
 from ._C_DIRECT import DataType
 
 import ctypes
+import gc
 from typing import Type, Union, Tuple
 import functools
 

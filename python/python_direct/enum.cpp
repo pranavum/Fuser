@@ -71,7 +71,10 @@ void bindEnums(py::module& nvfuser) {
       .value("outer_persistent", SchedulerType::OuterPersistent)
       .value("transpose", SchedulerType::Transpose)
       .value("expr_eval", SchedulerType::ExprEval)
-      .value("resize", SchedulerType::Resize);
+      .value("resize", SchedulerType::Resize)
+      .value("greedy", SchedulerType::Greedy)
+      .value("communication", SchedulerType::Communication)
+      .value("cutlass", SchedulerType::Cutlass);
 
   py::enum_<LoadStoreOpType>(nvfuser, "LoadStoreOpType", py::module_local())
       .value("set", LoadStoreOpType::Set)

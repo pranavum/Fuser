@@ -34,6 +34,10 @@ if check_module_available("quack"):
 @pytest.mark.parametrize(
     "executor", ["eager", "torchcompile", "thunder", "thunder-torchcompile"]
 )
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_cross_entropy_fwd_benchmark(
     benchmark,
     variation: str,
@@ -66,6 +70,10 @@ def test_cross_entropy_fwd_benchmark(
 @pytest.mark.parametrize(
     "executor", ["eager", "torchcompile", "thunder", "thunder-torchcompile"]
 )
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_cross_entropy_bwd_benchmark(
     benchmark,
     variation: str,
@@ -100,6 +108,10 @@ def test_cross_entropy_bwd_benchmark(
     "executor", ["eager", "torchcompile", "thunder", "thunder-torchcompile"]
 )
 @pytest.mark.parametrize("vocab_size", SyntheticMiniModel.generate_vocab_sizes())
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_cross_entropy_mini_benchmark_fwd(benchmark, executor: str, vocab_size: int):
     if executor == "torchcompile":
         clear_dynamo_cache()
@@ -120,6 +132,10 @@ def test_cross_entropy_mini_benchmark_fwd(benchmark, executor: str, vocab_size: 
     "executor", ["eager", "torchcompile", "thunder", "thunder-torchcompile"]
 )
 @pytest.mark.parametrize("vocab_size", SyntheticMiniModel.generate_vocab_sizes())
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_cross_entropy_mini_benchmark_bwd(benchmark, executor: str, vocab_size: int):
     if executor == "torchcompile":
         clear_dynamo_cache()
@@ -185,6 +201,10 @@ def nvfuser_cross_entropy_fusion(
 
 
 @pytest.mark.parametrize("vocab_size", SyntheticMiniModel.sizes_from_models)
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_function_cross_entropy_fwd_nvf_benchmark(
     benchmark, vocab_size: int, disable_validation: bool, disable_benchmarking: bool
 ):
@@ -240,6 +260,10 @@ def quack_cross_entropy_fwd_wrapper(inputs: list):
     ],
 )
 @pytest.mark.parametrize("vocab_size", SyntheticMiniModel.sizes_from_models)
+@pytest.mark.expr_eval
+@pytest.mark.inner_persistent
+@pytest.mark.pointwise
+@pytest.mark.reduction
 def test_function_cross_entropy_fwd_benchmark(
     benchmark, executor: str, vocab_size: int
 ):

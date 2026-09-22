@@ -196,8 +196,10 @@ def test_transpose_nvf_benchmark(
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
 @pytest.mark.parametrize(
     "is_copy_transpose",
-    [True, False],
-    ids=["copy", "view"],
+    [
+        pytest.param(True, marks=pytest.mark.transpose, id="copy"),
+        pytest.param(False, marks=pytest.mark.pointwise, id="view"),
+    ],
 )
 @pytest.mark.parametrize(
     "setup_fn",

@@ -42,6 +42,7 @@ SEQ_LENGTHS = [
 @pytest.mark.parametrize("seq_length", SEQ_LENGTHS)
 @pytest.mark.parametrize("vocab_hidden", EMBEDDING_CONFIGS)
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
+@pytest.mark.expr_eval
 def test_embedding_fwd_baseline_benchmark(
     benchmark,
     seq_length: int,
@@ -72,6 +73,7 @@ def test_embedding_fwd_baseline_benchmark(
 @pytest.mark.parametrize("seq_length", SEQ_LENGTHS)
 @pytest.mark.parametrize("vocab_hidden", EMBEDDING_CONFIGS)
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
+@pytest.mark.expr_eval
 def test_embedding_bwd_baseline_benchmark(
     benchmark,
     seq_length: int,

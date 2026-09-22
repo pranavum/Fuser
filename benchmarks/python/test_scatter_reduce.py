@@ -39,6 +39,8 @@ SEQ_LENGTHS = [
 @pytest.mark.parametrize("seq_length", SEQ_LENGTHS)
 @pytest.mark.parametrize("topk_hidden", TEST_CONFIGS)
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
+@pytest.mark.expr_eval
+@pytest.mark.reduction
 def test_scatter_reduce_fwd_baseline_benchmark(
     benchmark,
     seq_length: int,
@@ -69,6 +71,8 @@ def test_scatter_reduce_fwd_baseline_benchmark(
 @pytest.mark.parametrize("seq_length", SEQ_LENGTHS)
 @pytest.mark.parametrize("topk_hidden", TEST_CONFIGS)
 @pytest.mark.parametrize("dtype", FLOAT_DTYPES)
+@pytest.mark.expr_eval
+@pytest.mark.reduction
 def test_scatter_reduce_bwd_baseline_benchmark(
     benchmark,
     seq_length: int,
